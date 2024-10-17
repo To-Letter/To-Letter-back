@@ -55,6 +55,18 @@ public class LetterService {
         int arrivedDay = this.getReceivedTime(gps);
         LocalDateTime arrivedTime = now.plusMinutes(arrivedDay);
 
+        // user 메일함에 저장
+        List<Long> toUserReceivedBox = toUser.getReceivedBox();
+        List<Long> fromUserSentBox = fromUser.getSentBox();
+        toUserReceivedBox.add(letter.getId());
+        fromUserSentBox.add(letter.getId());
+        toUser.updateReceivedBox(toUserReceivedBox);
+        fromUser.updateSentBox(fromUserSentBox);
+        System.out.println(toUserReceivedBox);
+        System.out.println(fromUserSentBox);
+        userRepository.save(toUser);
+        userRepository.save(fromUser);
+
         // 메일 db 저장
         letter.setFromUserNickname(fromUser.getNickname());
         letter.setArrivedAt(arrivedTime);
