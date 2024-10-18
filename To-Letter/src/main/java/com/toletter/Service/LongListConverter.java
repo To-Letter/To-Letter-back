@@ -9,25 +9,25 @@ import javax.persistence.Converter;
 import java.util.List;
 
 @Converter
-public class StringListConvert implements AttributeConverter<List<String>, String> {
+public class LongListConverter implements AttributeConverter<List<Long>, String> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public String convertToDatabaseColumn(List<String> dataInfo) {
+    public String convertToDatabaseColumn(List<Long> dataInfo) {
         try {
             return objectMapper.writeValueAsString(dataInfo);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException("JSON 직렬화 오류: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public List<String> convertToEntityAttribute(String data) {
+    public List<Long> convertToEntityAttribute(String data) {
         try {
-            return objectMapper.readValue(data, new TypeReference<>() {});
+            return objectMapper.readValue(data, new TypeReference<List<Long>>() {});
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException("JSON 역직렬화 오류: " + e.getMessage(), e);
         }
     }
 }

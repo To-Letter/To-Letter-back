@@ -15,6 +15,7 @@ import com.toletter.Repository.*;
 import com.toletter.Service.Jwt.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,18 +56,6 @@ public class LetterService {
         int arrivedDay = this.getReceivedTime(gps);
         LocalDateTime arrivedTime = now.plusMinutes(arrivedDay);
 
-        // user 메일함에 저장
-        List<Long> toUserReceivedBox = toUser.getReceivedBox();
-        List<Long> fromUserSentBox = fromUser.getSentBox();
-        toUserReceivedBox.add(letter.getId());
-        fromUserSentBox.add(letter.getId());
-        toUser.updateReceivedBox(toUserReceivedBox);
-        fromUser.updateSentBox(fromUserSentBox);
-        System.out.println(toUserReceivedBox);
-        System.out.println(fromUserSentBox);
-        userRepository.save(toUser);
-        userRepository.save(fromUser);
-
         // 메일 db 저장
         letter.setFromUserNickname(fromUser.getNickname());
         letter.setArrivedAt(arrivedTime);
@@ -87,18 +76,31 @@ public class LetterService {
         saveReceivedBox.setLetter(letter);
         receivedBoxRepository.save(saveReceivedBox.toEntity());
 
+        // user 메일함에 저장
+        if(toUser.getEmail().equals(fromUser.getEmail())){
+            toUser.getReceivedBox().add(letter.getId());
+            toUser.getSentBox().add(letter.getId());
+            userRepository.save(toUser);
+        } else {
+            toUser.getReceivedBox().add(letter.getId());
+            userRepository.save(toUser);
+
+            fromUser.getSentBox().add(letter.getId());
+            userRepository.save(fromUser);
+        }
+
         // 알림 보내기
         alarmService.scheduleTask(toUser.getNickname(), letter, arrivedDay);
         return ResponseDTO.res(200, "메일 보내기 성공", "");
     }
 
     // 모든 받은 메일함 열기
-    public ResponseDTO receivedLetter (CustomUserDetails userDetails){
+    public ResponseDTO receivedLetter(CustomUserDetails userDetails){
         User user =  userDetails.getUser();
 
-        List<ReceivedBox> listBox = receivedBoxRepository.findAllByUserNickname(user.getNickname());
-        List<LetterDTO> LetterList = listBox.stream()
-                .map(ReceivedBox::getLetter)
+        List<Long> letterIdList = user.getReceivedBox();
+        List<LetterDTO> LetterList = letterIdList.stream()
+                .map(letterId -> letterRepository.findById(letterId).orElseThrow(() -> new ErrorException("이메일이 없음", 200, ErrorCode.UNAUTHORIZED_EXCEPTION)))
                 .filter(letter -> letter.getArrivedAt().isBefore(LocalDateTime.now()))
                 .map(LetterDTO::toDTO)
                 .collect(Collectors.toList());
@@ -111,9 +113,9 @@ public class LetterService {
     public ResponseDTO receivedUnReadLetter(CustomUserDetails userDetails){
         User user =  userDetails.getUser();
 
-        List<ReceivedBox> letterList = receivedBoxRepository.findAllByUserNickname(user.getNickname());
+        List<Long> letterList = user.getReceivedBox();
         List<LetterDTO> unReadListBox = letterList.stream()
-                .map(ReceivedBox::getLetter)
+                .map(letterId -> letterRepository.findById(letterId).orElseThrow(() -> new ErrorException("이메일이 없음", 200, ErrorCode.UNAUTHORIZED_EXCEPTION)))
                 .filter(Objects::nonNull)
                 .filter(letter -> letter.getArrivedAt().isBefore(LocalDateTime.now()))
                 .filter(letter -> !letter.getViewCheck())
@@ -128,9 +130,9 @@ public class LetterService {
     public ResponseDTO receivedReadLetter(CustomUserDetails userDetails){
         User user =  userDetails.getUser();
 
-        List<ReceivedBox> letterList = receivedBoxRepository.findAllByUserNickname(user.getNickname());
+        List<Long> letterList = user.getReceivedBox();
         List<LetterDTO> readListBox = letterList.stream()
-                .map(ReceivedBox::getLetter)
+                .map(letterId -> letterRepository.findById(letterId).orElseThrow(() -> new ErrorException("이메일이 없음", 200, ErrorCode.UNAUTHORIZED_EXCEPTION)))
                 .filter(Objects::nonNull)
                 .filter(letter -> letter.getArrivedAt().isBefore(LocalDateTime.now()))
                 .filter(Letter::getViewCheck)
@@ -172,9 +174,9 @@ public class LetterService {
     public ResponseDTO viewSentBox(CustomUserDetails customUserDetails){
         User user = customUserDetails.getUser();
 
-        List<SentBox> letterList = sentBoxRepository.findAllByUserNickname(user.getNickname());
+        List<Long> letterList = user.getSentBox();
         List<LetterDTO> sentListBox = letterList.stream()
-                .map(SentBox::getLetter)
+                .map(letterId -> letterRepository.findById(letterId).orElseThrow(() -> new ErrorException("이메일이 없음", 200, ErrorCode.UNAUTHORIZED_EXCEPTION)))
                 .filter(Objects::nonNull)
                 .map(LetterDTO::toDTO)
                 .collect(Collectors.toList());
@@ -202,6 +204,9 @@ public class LetterService {
             return ResponseDTO.res(401, "메일의 소유주가 다릅니다.", "");
         }
         receivedBoxRepository.delete(receivedBox);
+        user.getReceivedBox().remove(letterID);
+        System.out.println(user.getReceivedBox());
+        userRepository.save(user);
         return ResponseDTO.res(200, "메일 삭제 성공", "");
     }
 

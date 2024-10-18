@@ -1,13 +1,12 @@
 package com.toletter.Entity;
 
-import com.toletter.DTO.letter.LetterDTO;
 import com.toletter.DTO.user.Request.UserKaKaoUpdateRequest;
 import com.toletter.DTO.user.Request.UserUpdateRequest;
 import com.toletter.Enums.LoginType;
 import javax.persistence.*;
 
 import com.toletter.Enums.UserRole;
-import com.toletter.Service.StringListConvert;
+import com.toletter.Service.LongListConverter;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.*;
 
@@ -57,12 +56,12 @@ public class User {
 
     // 받은 메일
     @ApiModelProperty(value = "받은 메일", example = "admin / user")
-    @Convert(converter = StringListConvert.class)
+    @Convert(converter = LongListConverter.class)
     private List<Long> receivedBox;
 
     // 보낸 메일
     @ApiModelProperty(value = "보낸 메일", example = "admin / user")
-    @Convert(converter = StringListConvert.class)
+    @Convert(converter = LongListConverter.class)
     private List<Long> sentBox;
 
     public void updateUser(UserUpdateRequest userUpdateRequest){
@@ -73,13 +72,5 @@ public class User {
     public void updateKakaoUser(UserKaKaoUpdateRequest userKaKaoUpdateRequest){
         this.address = userKaKaoUpdateRequest.getAddress();
         this.nickname = userKaKaoUpdateRequest.getNickname();
-    }
-
-    public void updateSentBox(List<Long> sentBox){
-        this.sentBox = sentBox;
-    }
-
-    public void updateReceivedBox(List<Long> receivedBox){
-        this.receivedBox = receivedBox;
     }
 }

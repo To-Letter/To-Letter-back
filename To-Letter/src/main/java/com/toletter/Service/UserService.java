@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.*;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor // 초기화되지 않은 final 필드에 대해 생성자를 생성해줌.
@@ -58,6 +59,8 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(userSignupRequest.getPassword()));
         user.setSecondConfirmed(false);
         user.setUserRole(UserRole.User);
+        user.setReceivedBox(new ArrayList<>());
+        user.setSentBox(new ArrayList<>());
         userRepository.save(user);
         return ResponseDTO.res(200, "회원가입 성공", "");
     }
